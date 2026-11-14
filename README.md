@@ -1,343 +1,184 @@
-# Implementation-of-On-Policy-Monte-Carlo-Control-using-Gymnasium
----
+# Implementation-of-Value-Iteration-for-Optimal-Policy-Computation-using-Gymnasium
 
+---
 ## Aim
 
-To implement **Monte Carlo Control** using the Gymnasium `FrozenLake-v1` environment and learn an improved policy by estimating the action-value function from complete episodes.
+To implement the **Value Iteration** algorithm for solving a finite Markov Decision Process using the Gymnasium `FrozenLake-v1` environment, and to compute the optimal state-value function and optimal policy using the Bellman optimality equation.
 
 ---
 
 ## Problem Statement
 
-The `FrozenLake-v1` environment consists of frozen tiles, holes, a start state, and a goal state. The agent must learn a policy that helps it reach the goal while avoiding holes.
 
-The objective of this experiment is to:
+Implement the Value Iteration algorithm to find the optimal value function V∗(s) and optimal policy π∗(s)(s) for the FrozenLake environment modeled as a finite Markov Decision Process.
 
-1. Generate complete episodes using the Gymnasium environment.
-2. Estimate the action-value function $Q(s,a)$ using Monte Carlo returns.
-3. Use epsilon-greedy action selection for exploration and exploitation.
-4. Improve the policy based on the learned Q-values.
-5. Display the final Q-table, estimated state-value function, learned policy, and learning curve.
-
----
 
 ## Software Requirements
+1. Python 3.x
+2. Gymnasium library
+3. NumPy
+4. Matplotlib
+5. Jupyter Notebook / Google Colab
 
-```bash
-pip install gymnasium numpy matplotlib
-```
-
----
 
 ## Environment Description
 
-The **FrozenLake-v1** environment is a grid-based reinforcement learning environment provided by Gymnasium.
+The FrozenLake environment is a grid-world problem where:
+S → Starting state
+F → Frozen surface (safe state)
+H → Hole (terminal state with reward 0)
+G → Goal state (terminal state with reward 1)
 
-The default 4 × 4 environment can be represented as:
+The agent must move from the start state to the goal while avoiding holes.
 
-```text
-S F F F
-F H F H
-F F F H
-H F F G
+The environment is a 4 × 4 grid:
 ```
 
-Where:
+F S F F
+F H F H
+F F F H
+G H F F 
+```
 
-* **S** – Starting state
-* **F** – Frozen/safe tile
-* **H** – Hole
-* **G** – Goal
+The environment is stochastic because is_slippery=True, meaning the agent may not always move in the intended direction.
 
-The agent has four possible actions:
+## MDP Representation
 
-| Action | Direction |
-| ------ | --------- |
-| 0      | Left      |
-| 1      | Down      |
-| 2      | Right     |
-| 3      | Up        |
+The FrozenLake environment can be represented as:
 
-The objective is to move from the starting state to the goal without falling into a hole.
+MDP=(S,A,P,R,γ)
+where:
+S → Set of states (16 states)
+A → Set of actions (Left, Down, Right, Up)
+P → Transition probability function
+R → Reward function
+γ → Discount factor
 
-In this implementation, `is_slippery=False` is used, making the environment deterministic.
-
+Actions:
+0 - Left
+1 -	Down
+2	- Right
+3	- Up
 
 ## Theory
 
-Monte Carlo methods learn from **complete episodes**. An episode is a sequence of states, actions, and rewards:
 
-$$
-S_0, A_0, R_1, S_1, A_1, R_2, \ldots, S_T
-$$
+Value Iteration is a dynamic programming algorithm used to find the optimal policy in a Markov Decision Process. It repeatedly updates state values by choosing the best possible action until the values converge. The final values are used to generate the optimal policy for the agent.
 
-The return from time step $t$ is:
 
-$$
-G_t = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \cdots
-$$
-
-Monte Carlo Control estimates the action-value function:
-
-$$
-Q(s,a)
-$$
-
-The incremental update rule is:
-
-$$
-Q(s,a) \leftarrow Q(s,a) + \alpha \left[G_t - Q(s,a)\right]
-$$
-
-Where:
-
-| Symbol | Meaning |
-|---|---|
-| $s$ | Current state |
-| $a$ | Action taken in state $s$ |
-| $G_t$ | Return from time step $t$ |
-| $Q(s,a)$ | Action-value estimate |
-| $\alpha$ | Learning rate |
-| $\gamma$ | Discount factor |
-
----
-
-## Epsilon-Greedy Policy
-
-Monte Carlo Control uses epsilon-greedy action selection.
-
-With probability $\epsilon$, the agent explores by selecting a random action.
-
-With probability $1 - \epsilon$, the agent exploits by selecting the action with the highest Q-value.
-
-The greedy action is selected as:
-
-$$
-a = \arg\max_a Q(s,a)
-$$
-
-The final learned policy is:
-
-$$
-\pi(s) = \arg\max_a Q(s,a)
-$$
-
----
 
 ## Algorithm
 
-1. Initialize the FrozenLake environment.
-2. Initialize the Q-table with zeros.
-3. Set the learning rate $\alpha$, discount factor $\gamma$, and epsilon parameters.
-4. Generate a complete episode using the epsilon-greedy policy.
-5. Store the state, action, and reward for every step.
-6. Start from the last step of the episode.
-7. Calculate the return $G$ backwards.
-8. Update the corresponding Q-value using the Monte Carlo update rule.
-9. Decrease epsilon gradually.
-10. Repeat the process for the specified number of episodes.
-11. Extract the greedy policy from the learned Q-table.
-12. Calculate the state-value function.
-13. Display the final Q-table, state-value function, learned policy, and average reward.
-14. Plot the learning curve.
+Step 1:
+Initialize the value function: V(s)=0 for all states.
+
+Step 2:
+For every state, calculate the maximum expected value over all actions.
+
+Step 3:
+Update the value function using Bellman optimality equation.
+
+Step 4:
+Repeat until the change in values is less than the threshold θ.
+
+Step 5:
+Extract the optimal policy by selecting the action with maximum value.
+
+
 
 ## Python Program
-
--------------------------------------------------
-#### Monte Carlo Control
-
 
 ```python
 import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
 
-# -------------------------------------------------
-# Create Environment
-# -------------------------------------------------
-env = gym.make("FrozenLake-v1", is_slippery=False)
+env_desc = [
+    "FSFF",
+    "FHFH",
+    "FFFH",
+    "GFFF"
+]
 
-n_states = env.observation_space.n
-n_actions = env.action_space.n
-
-# -------------------------------------------------
-# Hyperparameters
-# -------------------------------------------------
-num_episodes = 20000
-gamma = 0.99
-alpha = 0.1
-
-epsilon_start = 1.0
-epsilon_min = 0.05
-epsilon_decay = 0.9995
-
-max_steps_per_episode = 100
+env = gym.make("FrozenLake-v1", desc=env_desc, is_slippery=True)
 
 # -------------------------------------------------
-# Initialize Q-table
+# Value Iteration Algorithm
 # -------------------------------------------------
-Q = np.zeros((n_states, n_actions))
-episode_rewards = []
 
-# -------------------------------------------------
-# Epsilon-Greedy Action Selection
-# -------------------------------------------------
-def epsilon_greedy_action(state, epsilon):
+def value_iteration(env, gamma=0.99, theta=1e-8):
     """
-    Select an action using epsilon-greedy strategy.
+    Performs Value Iteration and returns:
+    Value Function,
+    Optimal Policy,
+    Number of Iterations
     """
 
-    if np.random.rand() < epsilon:
-        return env.action_space.sample()
-    else:
-        return np.argmax(Q[state])
+    n_states = env.observation_space.n
+    n_actions = env.action_space.n
 
+    # Initialize Value Function
+    V = np.zeros(n_states)
+    iteration = 0
+    while True:
+        delta = 0
+        for s in range(n_states):
+            v = V[s]
+            action_values = np.zeros(n_actions)
+            for a in range(n_actions):
+                for prob, next_state, reward, done in env.unwrapped.P[s][a]:
+                    action_values[a] += prob * (
+                        reward + gamma * V[next_state]
+                    )
+            V[s] = np.max(action_values)
+            delta = max(delta, abs(v - V[s]))
+        iteration += 1
 
-# -------------------------------------------------
-# Generate One Complete Episode
-# -------------------------------------------------
-def generate_episode(epsilon):
-    """
-    Generates one complete episode using
-    the current epsilon-greedy policy.
-    """
-
-    episode = []
-
-    state, info = env.reset()
-
-    for _ in range(max_steps_per_episode):
-
-        action = epsilon_greedy_action(state, epsilon)
-
-        next_state, reward, terminated, truncated, info = env.step(action)
-
-        episode.append((state, action, reward))
-
-        state = next_state
-
-        if terminated or truncated:
+        if delta < theta:
             break
+    # Extract Optimal Policy
+    policy = np.zeros(n_states, dtype=int)
+    for s in range(n_states):
+        action_values = np.zeros(n_actions)
+        for a in range(n_actions):
+            for prob, next_state, reward, done in env.unwrapped.P[s][a]:
+                action_values[a] += prob * (
+                    reward + gamma * V[next_state]
+                )
+        policy[s] = np.argmax(action_values)
+    return V, policy, iteration
 
-    return episode
+# -------------------------------------------------
+# Run Value Iteration
+# -------------------------------------------------
+V, policy, iterations = value_iteration(env)
 
 
 # -------------------------------------------------
-# Monte Carlo Control
+# Display Output
 # -------------------------------------------------
-epsilon = epsilon_start
+print("Name: Harini P ")
+print("Register Number:  212224230082 ")
+print("Value Iteration Completed")
+print("Number of Iterations:", iterations)
 
-for ep in range(num_episodes):
-
-    episode = generate_episode(epsilon)
-
-    total_reward = sum(
-        reward for _, _, reward in episode
-    )
-
-    episode_rewards.append(total_reward)
-
-    G = 0
-    visited_state_action = set()
-
-    for state, action, reward in reversed(episode):
-
-        G = gamma * G + reward
-
-        if (state, action) not in visited_state_action:
-
-            visited_state_action.add((state, action))
-
-            Q[state, action] += alpha * (
-                G - Q[state, action]
-            )
-
-    epsilon = max(
-        epsilon_min,
-        epsilon * epsilon_decay
-    )
+print("\nOptimal State-Value Function:")
+print(np.round(V.reshape(4, 4), 4))
 
 
-# -------------------------------------------------
-# Extract Greedy Policy & State Values
-# -------------------------------------------------
-optimal_policy = np.argmax(Q, axis=1)
+action_symbols = {
+    0: "L",
+    1: "D",
+    2: "R",
+    3: "U"
+}
 
-state_values = np.max(Q, axis=1)
+policy_grid = np.array(
+    [action_symbols[action] for action in policy]
+).reshape(4, 4)
 
-
-# -------------------------------------------------
-# Display Results
-# -------------------------------------------------
-def print_policy(policy):
-
-    action_symbols = {
-        0: "L",
-        1: "D",
-        2: "R",
-        3: "U"
-    }
-
-    policy_grid = np.array(
-        [action_symbols[action] for action in policy]
-    ).reshape(4, 4)
-
-    print("Name: Harini P")
-    print("Register Number: 212224230082")
-
-    print("\nLearned Policy:")
-    print(policy_grid)
-
-
-def print_value_function(values):
-
-    print("\nEstimated State-Value Function:")
-    print(np.round(values.reshape(4, 4), 3))
-
-
-print("\nFinal Q-table:")
-print(np.round(Q, 3))
-
-print_value_function(state_values)
-
-print_policy(optimal_policy)
-
-
-success_rate = np.mean(
-    episode_rewards[-1000:]
-)
-
-print(
-    "\nAverage reward over last 1000 episodes:",
-    success_rate
-)
-
-
-# -------------------------------------------------
-# Plot Learning Curve
-# -------------------------------------------------
-window = 500
-
-moving_average = np.convolve(
-    episode_rewards,
-    np.ones(window) / window,
-    mode="valid"
-)
-
-plt.figure(figsize=(8, 5))
-
-plt.plot(moving_average)
-
-plt.xlabel("Episode")
-plt.ylabel("Average Reward")
-
-plt.title(
-    "Monte Carlo Control Learning Curve"
-)
-
-plt.grid(True)
-
-plt.show()
+print("\nOptimal Policy:")
+print(policy_grid)
 
 env.close()
 
@@ -349,30 +190,42 @@ env.close()
 
 ## Output
 
-### Output for `num_episodes = 20000`
+for this : the FrozenLake environment is
+```
+F S F F
+F H F H
+F F F H
+G F F F
+```
 
-<img width="440" height="665" alt="image" src="https://github.com/user-attachments/assets/33d84ead-83ad-4a2c-95e7-13fad7387ff2" />
+<img width="643" height="246" alt="image" src="https://github.com/user-attachments/assets/3485cc4e-8f90-45a6-bb75-683d0f6f00aa" />
 
-### Output for `num_episodes = 60000`
+for this : the FrozenLake environment is
+```
+S F F F
+F H F H
+F F F H
+H F F G
+```
+<img width="623" height="247" alt="image" src="https://github.com/user-attachments/assets/07ac83ad-89a3-4c72-a510-b518a1204386" />
 
-<img width="583" height="882" alt="image" src="https://github.com/user-attachments/assets/d8e1d4bc-3295-4e4b-828d-477d5436f82c" />
+
 
 
 ---
 
 ## Result
+```text
+## Result
 
-The **On-Policy Monte Carlo Control algorithm** was successfully implemented using the Gymnasium `FrozenLake-v1` environment. The agent learned the action-value function $Q(s,a)$ from complete episodes and improved its policy using an epsilon-greedy strategy.
+The Value Iteration algorithm was implemented successfully using the Gymnasium FrozenLake-v1 environment. The optimal state-value function and optimal policy were obtained, enabling the agent to select the best actions to reach the goal while avoiding hazardous states.
 
+```
 ---
 
 ## Inference
+```text
+The Value Iteration algorithm successfully computed the optimal state values and policies for both FrozenLake environments. The difference in the number of iterations and optimal policies is due to the changes in grid arrangement, hole positions, and goal location. The results show that Value Iteration can adapt to different environments and find an efficient path from the starting state to the goal while avoiding unsafe states.
 
-The experiment demonstrates that **On-Policy Monte Carlo Control** can learn an effective policy through repeated interaction with the environment. Initially, the agent explores different actions using a high epsilon value. As training progresses, epsilon decreases and the agent increasingly exploits the learned Q-values.
-
-The learned Q-table provides the estimated value of each action in every state, while the extracted greedy policy indicates the preferred action for reaching the goal. The learning curve shows the improvement in the agent's performance over successive training episodes.
-
-
-
-
+```
 ---
