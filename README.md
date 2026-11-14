@@ -207,7 +207,7 @@ F H F H
 F F F H
 H F F G
 ```
-<img width="623" height="247" alt="image" src="https://github.com/user-attachments/assets/07ac83ad-89a3-4c72-a510-b518a1204386" />
+<img width="562" height="297" alt="image" src="https://github.com/user-attachments/assets/079bc15a-e122-4eb9-956d-376d9b9da4cf" />
 
 
 
